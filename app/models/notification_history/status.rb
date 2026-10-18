@@ -7,7 +7,7 @@ module NotificationHistory
     end
 
     # Eventos internos que el cliente no ve
-    HIDDEN_EVENTS = %w[throttled_shadow].freeze
+    HIDDEN_EVENTS = %w[throttled_shadow recovered].freeze
 
     TONES = {
       delivered: :ok, digested: :ok, sent: :info, in_progress: :info,

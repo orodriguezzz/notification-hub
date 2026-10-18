@@ -32,7 +32,8 @@ module Notifications
       send_digest(entry, recipient, live)
     rescue TransientDeliveryError
       # Se reintenta en la próxima corrida
-      NotificationRequest.where(id: Array(live).map(&:id)).update_all(status: "deferred", scheduled_at: now + 1.hour)
+      NotificationRequest.where(id: Array(live).map(&:id))
+                         .update_all(status: "deferred", scheduled_at: now + 1.hour, updated_at: Time.current)
     end
 
     # Toma los requests del destinatario y los marca processing, para que otra corrida no los duplique
@@ -69,13 +70,28 @@ module Notifications
         decision_reason: { digest_request_ids: requests.map(&:id) }, status: "pending", attempts: 1
       )
 
-      provider_message_id = adapter.deliver(message: message, delivery: delivery)
-      delivery.update!(status: "sent", provider_message_id: provider_message_id, sent_at: Time.current)
-      NotificationEvent.record!(:sent, request: first, delivery: delivery, payload: { digest: true })
-      finish_all(requests, "completed", "digested", :digested, delivery_id: delivery.id)
+      provider_message_id = deliver(adapter, message, delivery)
+
+      # El resultado se registra en una sola transacción: entrega, evento y requests incluidos
+      NotificationRequest.transaction do
+        delivery.update!(status: "sent", provider_message_id: provider_message_id, sent_at: Time.current)
+        NotificationEvent.record!(:sent, request: first, delivery: delivery, payload: { digest: true })
+        finish_all(requests, "completed", "digested", :digested, delivery_id: delivery.id)
+      end
     rescue PermanentDeliveryError => e
-      delivery&.update!(status: "failed", last_error: e.message)
-      finish_all(requests, "failed", "provider_rejected", :failed)
+      NotificationRequest.transaction do
+        delivery&.update!(status: "failed", last_error: e.message)
+        finish_all(requests, "failed", "provider_rejected", :failed)
+      end
+    end
+
+    # Un error transitorio cierra esta entrega como fallida (no queda pendiente para siempre) y se
+    # propaga: deliver_digest devuelve los requests a deferred y la próxima corrida crea una entrega nueva.
+    def deliver(adapter, message, delivery)
+      adapter.deliver(message: message, delivery: delivery)
+    rescue TransientDeliveryError => e
+      delivery.update!(status: "failed", last_error: "#{e.message} (se reintenta en la próxima corrida)")
+      raise
     end
 
     def finish_all(requests, status, reason, event, **payload)

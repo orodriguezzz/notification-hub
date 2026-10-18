@@ -227,11 +227,14 @@ module Notifications
       end
     end
 
+    # Estado y job en la misma transacción (misma base): un request postergado nunca queda sin job
     def defer(request, decision)
-      request.update!(status: "deferred", status_reason: decision.reason.to_s, scheduled_at: decision.until_time)
-      NotificationEvent.record!(:deferred, request: request, payload: decision.as_json)
-      DispatchJob.set(queue: Notifications.queue_for(request.category), wait_until: decision.until_time)
-                 .perform_later(request.id)
+      NotificationRequest.transaction do
+        request.update!(status: "deferred", status_reason: decision.reason.to_s, scheduled_at: decision.until_time)
+        NotificationEvent.record!(:deferred, request: request, payload: decision.as_json)
+        DispatchJob.set(queue: Notifications.queue_for(request.category), wait_until: decision.until_time)
+                   .perform_later(request.id)
+      end
     end
 
     # Queda postergado; DigestJob lo incluirá en el resumen de las 08:00 locales

@@ -1,6 +1,9 @@
 # Tareas recurrentes de Solid Queue.
 # No hace falta limpiar jobs terminados: preserve_finished_jobs = false (la auditoría vive en notification_events).
 production: &recurring
+  notification_recover_stale:
+    class: Notifications::RecoverStaleJob           # rescata requests trancados en processing (worker caído)
+    schedule: every 10 minutes
   notification_digest:
     class: Notifications::DigestJob
     schedule: every hour

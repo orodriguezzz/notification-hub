@@ -8,6 +8,10 @@ module Notifications
         NETWORK_ERRORS = [ Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH,
                            SocketError, OpenSSL::SSL::SSLError, EOFError, Net::OpenTimeout, Net::ReadTimeout ].freeze
 
+        # Timeouts cortos: un SendGrid lento no debe bloquear los threads del worker (por defecto Net::HTTP espera 60 s).
+        # Un timeout es un error transitorio y el envío se reintenta.
+        HTTP_OPTIONS = { open_timeout: 5, read_timeout: 10 }.freeze
+
         def initialize(api_key: self.class.api_key, from: Rails.configuration.x.notifications.from_email,
                        sandbox: Rails.configuration.x.notifications.sendgrid_sandbox)
           @api_key = api_key
@@ -53,7 +57,11 @@ module Notifications
         private
 
         def client
-          SendGrid::API.new(api_key: @api_key).client
+          api.client
+        end
+
+        def api
+          SendGrid::API.new(api_key: @api_key, http_options: HTTP_OPTIONS)
         end
 
         def handle_response(response)

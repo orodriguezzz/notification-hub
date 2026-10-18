@@ -174,6 +174,49 @@ class Notifications::AntiSpamTest < ActiveSupport::TestCase
     assert_empty sent_emails
   end
 
+  test "postergar es atómico: si no se puede encolar el job, el request no queda deferred sin job" do
+    at_local(SANTIAGO, 22, 30)
+    handle = payslip_for(@ana, 1)
+    failing = Object.new
+    def failing.perform_later(*) = raise(ActiveRecord::StatementInvalid, "falla simulada al encolar")
+
+    Notifications::DispatchJob.define_singleton_method(:set) { |*| failing }
+    begin
+      assert_raises(ActiveRecord::StatementInvalid) { Notifications::Dispatcher.call(handle.id) }
+    ensure
+      Notifications::DispatchJob.singleton_class.remove_method(:set)
+    end
+
+    # El estado y el evento se revierten junto con el encolado: queda processing y lo rescata RecoverStaleJob
+    request = NotificationRequest.find(handle.id)
+    assert_equal "processing", request.status
+    assert_not_includes event_types_for(request), "deferred"
+  end
+
+  test "digest: un error transitorio cierra la entrega como fallida y reintenta en la próxima corrida" do
+    at_local(SANTIAGO, 12)
+    use_policy { |policy| policy.rate_limits[:engagement].max = 0 }
+    handles = 2.times.map { |i| engagement(@ana, "Encuesta #{i}") }
+    handles.each { dispatch(_1) }
+
+    travel_to SANTIAGO.local(*tomorrow(SANTIAGO), 8, 0)
+    Notifications::Channels::Email::TestAdapter.fail_next!(Notifications::TransientDeliveryError, "503")
+    Notifications::DigestJob.perform_now
+
+    requests = NotificationRequest.where(id: handles.map(&:id))
+    assert_equal [ "deferred" ], requests.pluck(:status).uniq
+    assert_equal [ "digest" ], requests.pluck(:status_reason).uniq
+    assert_equal [ "failed" ], NotificationDelivery.where(notification_key: "daily_digest").pluck(:status)
+    assert_empty sent_emails
+
+    travel 1.hour
+    Notifications::DigestJob.perform_now
+
+    assert_equal 1, sent_emails.size
+    assert_equal [ "completed" ], requests.reload.pluck(:status).uniq
+    assert_equal %w[failed sent], NotificationDelivery.where(notification_key: "daily_digest").order(:created_at).pluck(:status)
+  end
+
   private
 
   def at_local(zone, hour, minute = 0)

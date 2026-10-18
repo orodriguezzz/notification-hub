@@ -6,7 +6,7 @@ class NotificationEvent < ApplicationRecord
   TYPES = %w[
     enqueued sent delivered opened clicked bounced dropped spam_report unsubscribed
     fallback_triggered throttled throttled_shadow deferred digested expired failed
-    skipped undeliverable
+    skipped undeliverable recovered
   ].freeze
 
   # Sin FK entre tablas particionadas: la integridad la asegura la central, no una consulta por evento

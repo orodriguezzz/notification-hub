@@ -52,6 +52,10 @@ class Notifications::SendgridAdapterTest < ActiveSupport::TestCase
     assert_match "400", error.message
   end
 
+  test "usa timeouts cortos para no bloquear los threads del worker" do
+    assert_equal({ open_timeout: 5, read_timeout: 10 }, @adapter.send(:api).http_options)
+  end
+
   test "un error de red es transitorio" do
     stub_request(:post, ENDPOINT).to_timeout
 
