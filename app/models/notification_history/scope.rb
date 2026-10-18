@@ -6,6 +6,7 @@ module NotificationHistory
 
     WINDOW = 90.days
     PER_PAGE = 25
+    UUID_FORMAT = /\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/
 
     Row = Data.define(:request, :employee, :delivery, :status)
     Page = Data.define(:rows, :next_cursor)
@@ -93,8 +94,11 @@ module NotificationHistory
       "#{request.created_at.utc.iso8601(6)}|#{request.id}"
     end
 
+    # Un cursor manipulado (id que no es UUID o fecha inválida) se ignora en vez de llegar a PostgreSQL
     def after_cursor(relation, cursor)
       created_at, id = cursor.split("|", 2)
+      return relation unless id.to_s.match?(UUID_FORMAT)
+
       relation.where("(notification_requests.created_at, notification_requests.id) < (?, ?)", Time.iso8601(created_at), id)
     rescue ArgumentError
       relation

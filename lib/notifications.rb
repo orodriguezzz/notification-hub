@@ -5,12 +5,18 @@
 #   - Despacho:             Notifications::Dispatcher (asíncrono, vía Notifications::DispatchJob)
 #   - Política de canales:  Notifications::Policy + config/notifications/channel_policy.rb
 module Notifications
-  # Cola de Solid Queue según la categoría
-  QUEUES = { critical: "critical", operational: "default", engagement: "bulk" }.freeze
+  # Categorías de notificación y la cola de Solid Queue de cada una. Es la ÚNICA lista: el DSL de
+  # definición, la política y el despacho la leen de aquí. Agregar una categoría = una entrada aquí
+  # y su bloque de reglas en config/notifications/channel_policy.rb (la política valida que exista).
+  CATEGORIES = { critical: "critical", operational: "default", engagement: "bulk" }.freeze
   DIGEST_QUEUE = "bulk".freeze
 
+  def self.categories
+    CATEGORIES.keys
+  end
+
   def self.queue_for(category)
-    QUEUES.fetch(category.to_sym)
+    CATEGORIES.fetch(category.to_sym)
   end
 
   def self.policy

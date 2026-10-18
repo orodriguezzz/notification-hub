@@ -112,6 +112,16 @@ class NotificationHistoryControllerTest < ActionDispatch::IntegrationTest
     assert_select "tbody tr", count: 32 - NotificationHistory::Scope::PER_PAGE
   end
 
+  test "un cursor manipulado se ignora en vez de provocar un error" do
+    sign_in users(:admin_cl)
+
+    get notification_history_index_path(before: "#{Time.current.utc.iso8601}|no-es-un-uuid")
+    assert_response :success
+
+    get notification_history_index_path(before: "no-es-una-fecha|#{SecureRandom.uuid}")
+    assert_response :success
+  end
+
   test "un rango de más de 90 días muestra el mensaje de soporte y no consulta la BD" do
     sign_in users(:admin_cl)
 

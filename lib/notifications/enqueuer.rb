@@ -41,6 +41,10 @@ module Notifications
     end
 
     def build_row(to, params, explicit_key, origin)
+      unless Recipients.allowed?(to.class.polymorphic_name)
+        raise InvalidParamsError, "#{@definition.name}: tipo de destinatario no permitido (#{to.class.name})"
+      end
+
       normalized = @definition.normalize_params(to, params)
       now = Time.current
 

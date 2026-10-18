@@ -35,6 +35,19 @@ class Webhooks::SendgridControllerTest < ActionDispatch::IntegrationTest
     assert_response :accepted
   end
 
+  test "rechaza un lote firmado con un timestamp antiguo (replay)" do
+    assert_no_difference -> { SolidQueue::Job.where(class_name: "Notifications::WebhookEventsJob").count } do
+      signed_post([ { "event" => "open", "delivery_id" => SecureRandom.uuid } ], timestamp: 20.minutes.ago.to_i.to_s)
+    end
+
+    assert_response :unauthorized
+  end
+
+  test "rechaza un timestamp que no es numérico" do
+    signed_post([ { "event" => "open", "delivery_id" => SecureRandom.uuid } ], timestamp: "ayer")
+    assert_response :unauthorized
+  end
+
   test "actualiza estados de forma idempotente" do
     delivery = sent_delivery
     events = [ sendgrid_event(delivery, "delivered", "sg-1"), sendgrid_event(delivery, "open", "sg-2") ]
@@ -80,9 +93,8 @@ class Webhooks::SendgridControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-  def signed_post(events)
+  def signed_post(events, timestamp: Time.current.to_i.to_s)
     payload = events.to_json
-    timestamp = Time.current.to_i.to_s
     signature = Base64.strict_encode64(@key.dsa_sign_asn1(Digest::SHA256.digest("#{timestamp}#{payload}")))
 
     post webhooks_sendgrid_path, params: payload, headers: {

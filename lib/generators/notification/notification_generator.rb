@@ -5,17 +5,17 @@ require "rails/generators/named_base"
 class NotificationGenerator < Rails::Generators::NamedBase
   source_root File.expand_path("templates", __dir__)
 
-  class_option :category, type: :string, required: true, desc: "critical, operational o engagement"
+  class_option :category, type: :string, required: true, desc: "Categoría (ver Notifications::CATEGORIES)"
   class_option :owner, type: :string, required: true, desc: "Equipo dueño (p. ej. people_team)"
   class_option :recipient, type: :string, default: "employee", desc: "Tipo de destinatario"
 
-  CATEGORIES = %w[critical operational engagement].freeze
   LOCALE_FILE = "config/locales/notifications.es.yml".freeze
 
   def validate_options
-    return if CATEGORIES.include?(options[:category])
+    categories = Notifications.categories.map(&:to_s)
+    return if categories.include?(options[:category])
 
-    raise Thor::Error, "Categoría inválida: #{options[:category]} (usa #{CATEGORIES.join(', ')})"
+    raise Thor::Error, "Categoría inválida: #{options[:category]} (usa #{categories.join(', ')})"
   end
 
   def create_definition

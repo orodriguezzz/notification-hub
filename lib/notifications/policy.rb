@@ -94,7 +94,7 @@ module Notifications
     end
 
     def validate!
-      missing = DefinitionDsl::CATEGORIES - rules.keys
+      missing = Notifications.categories - rules.keys
       raise DefinitionError, "La política no define las categorías #{missing.join(', ')}" if missing.any?
 
       self

@@ -21,6 +21,6 @@ class NotificationDelivery < ApplicationRecord
   has_many :events, class_name: "NotificationEvent", foreign_key: :delivery_id, inverse_of: :delivery
 
   def recipient
-    recipient_type.constantize.find_by(id: recipient_id)
+    Notifications::Recipients.find(recipient_type, recipient_id)
   end
 end

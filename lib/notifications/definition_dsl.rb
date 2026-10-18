@@ -13,7 +13,6 @@ module Notifications
   # La definición se valida al cerrar la clase (`end`): si falta algo obligatorio,
   # la carga falla con Notifications::DefinitionError.
   module DefinitionDsl
-    CATEGORIES = %i[critical operational engagement].freeze
     REQUIRED = %i[key category owner recipient content].freeze
     KEY_FORMAT = /\A[a-z][a-z0-9_]*\z/
 
@@ -88,8 +87,8 @@ module Notifications
       def category(value = nil)
         return @category if value.nil?
 
-        unless CATEGORIES.include?(value.to_sym)
-          raise DefinitionError, "#{name}: categoría #{value.inspect} inválida (usa #{CATEGORIES.join(', ')})"
+        unless Notifications.categories.include?(value.to_sym)
+          raise DefinitionError, "#{name}: categoría #{value.inspect} inválida (usa #{Notifications.categories.join(', ')})"
         end
 
         @category = value.to_sym

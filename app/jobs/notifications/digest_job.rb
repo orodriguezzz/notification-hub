@@ -18,7 +18,7 @@ module Notifications
       requests = claim(recipient_type, recipient_id, now)
       return if requests.empty?
 
-      recipient = recipient_type.constantize.find_by(id: recipient_id)
+      recipient = Recipients.find(recipient_type, recipient_id)
       return finish_all(requests, "skipped", "entity_missing", :skipped) unless recipient
 
       expired, live = requests.partition { |request| request.expires_at&.<=(now) }

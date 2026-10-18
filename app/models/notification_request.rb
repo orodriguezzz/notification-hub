@@ -18,7 +18,7 @@ class NotificationRequest < ApplicationRecord
   end
 
   def recipient
-    recipient_type.constantize.find_by(id: recipient_id)
+    Notifications::Recipients.find(recipient_type, recipient_id)
   end
 
   def digest_pending?
