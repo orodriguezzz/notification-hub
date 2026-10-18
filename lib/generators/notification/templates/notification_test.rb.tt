@@ -1,0 +1,19 @@
+require "test_helper"
+
+class <%= notification_class %>Test < ActiveSupport::TestCase
+  test "registra el envío" do
+    <%= recipient %> = <%= recipient.camelize %>.first
+
+    handle = <%= notification_class %>.deliver(to: <%= recipient %>)
+
+    assert handle.accepted?
+    assert_equal "<%= notification_key %>", NotificationRequest.find(handle.id).notification_key
+  end
+
+  test "renderiza el contenido" do
+    content = <%= notification_class %>.build_content(<%= notification_class %>.preview_params)
+
+    assert content.title.present?
+    assert content.body.present?
+  end
+end

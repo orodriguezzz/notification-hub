@@ -1,0 +1,17 @@
+admin_cl:
+  company: acme_cl
+  name: Paula Admin
+  email: paula@acme.test
+  role: company_admin
+
+member_cl:
+  company: acme_cl
+  name: Mario Miembro
+  email: mario@acme.test
+  role: member
+
+admin_mx:
+  company: globex_mx
+  name: Lucía Admin
+  email: lucia@globex.test
+  role: company_admin

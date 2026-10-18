@@ -1,0 +1,17 @@
+class <%= notification_class %> < ApplicationNotification
+  key      :<%= notification_key %>
+  category :<%= options[:category] %>
+  owner    :<%= options[:owner] %>
+  recipient :<%= recipient %>
+
+  param :<%= recipient %>, required: true
+
+  # Contenido semántico: no menciones canales ni direcciones
+  content do |p|
+    title  t(".title")
+    body   t(".body")
+    action t(".action"), url: routes.root_url
+  end
+
+  preview { { <%= recipient %>: <%= recipient.camelize %>.first } }
+end

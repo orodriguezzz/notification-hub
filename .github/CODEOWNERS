@@ -1,0 +1,4 @@
+# La política central y las definiciones de notificaciones las revisa el equipo de plataforma
+/config/notifications/channel_policy.rb @platform-team
+/app/notifications/                    @platform-team
+/lib/notifications/                    @platform-team

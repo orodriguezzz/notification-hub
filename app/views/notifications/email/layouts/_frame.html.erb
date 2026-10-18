@@ -1,0 +1,32 @@
+<%# Marco común de los correos. Estilos en línea: los clientes de correo ignoran las hojas de estilo. %>
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= subject %></title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4f5f7;font-family:Helvetica,Arial,sans-serif;color:#1f2933;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:24px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;">
+            <tr>
+              <td style="background:<%= accent %>;height:6px;line-height:6px;font-size:0;">&nbsp;</td>
+            </tr>
+            <tr>
+              <td style="padding:32px 32px 24px 32px;">
+                <%= yield %>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px 28px 32px;border-top:1px solid #e4e7eb;font-size:12px;color:#7b8794;">
+                <%= t("notifications.email.footer") %>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

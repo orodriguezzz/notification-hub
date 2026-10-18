@@ -1,0 +1,7 @@
+<% content_for :title, t(".title") %>
+
+<div class="card">
+  <h1><%= t(".title") %></h1>
+  <p><%= t(".body", name: @employee.first_name) %></p>
+  <%= button_to t(".confirm"), request.path, method: :post, class: "button" %>
+</div>

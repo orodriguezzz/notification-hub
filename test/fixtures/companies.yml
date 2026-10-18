@@ -1,0 +1,9 @@
+acme_cl:
+  name: Acme Chile
+  country: CL
+  time_zone: America/Santiago
+
+globex_mx:
+  name: Globex México
+  country: MX
+  time_zone: America/Mexico_City

@@ -1,0 +1,79 @@
+<% content_for :title, t(".title") %>
+
+<h1><%= t(".title") %></h1>
+<p class="muted"><%= t(".intro", company: @scope.company.name) %></p>
+
+<%= form_with url: notification_history_index_path, method: :get, class: "filters card", data: { turbo_frame: "_top" } do |f| %>
+  <div>
+    <%= f.label :employee, t(".filters.employee") %>
+    <%= f.text_field :employee, value: @filters.employee, placeholder: t(".filters.employee_placeholder") %>
+  </div>
+  <div>
+    <%= f.label :from, t(".filters.from") %>
+    <%= f.date_field :from, value: @filters.from %>
+  </div>
+  <div>
+    <%= f.label :to, t(".filters.to") %>
+    <%= f.date_field :to, value: @filters.to %>
+  </div>
+  <div>
+    <%= f.label :notification_key, t(".filters.type") %>
+    <%= f.select :notification_key, @notification_types, { include_blank: t(".filters.all"), selected: @filters.notification_key } %>
+  </div>
+  <div>
+    <%= f.label :status, t(".filters.status") %>
+    <%= f.select :status, NotificationHistory::Status::FILTERS.keys.map { [ t(".status_filters.#{_1}"), _1 ] },
+                 { include_blank: t(".filters.all"), selected: @filters.status } %>
+  </div>
+  <div>
+    <%= f.submit t(".filters.submit"), name: nil %>
+  </div>
+<% end %>
+
+<% if @out_of_window %>
+  <div class="notice-box" role="status"><%= t(".out_of_window") %></div>
+<% elsif @page.rows.empty? %>
+  <p class="muted"><%= t(".empty") %></p>
+<% else %>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th><%= t(".columns.date") %></th>
+          <th><%= t(".columns.employee") %></th>
+          <th><%= t(".columns.type") %></th>
+          <th><%= t(".columns.category") %></th>
+          <th><%= t(".columns.channel") %></th>
+          <th><%= t(".columns.status") %></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @page.rows.each do |row| %>
+          <tr>
+            <td><%= l(row.request.created_at.in_time_zone(@scope.zone), format: :history) %></td>
+            <td>
+              <% if row.employee %>
+                <%= row.employee.full_name %><br><span class="muted"><%= row.employee.email %></span>
+              <% else %>
+                <span class="muted"><%= t(".deleted_employee") %></span>
+              <% end %>
+            </td>
+            <td><%= NotificationHistory::Status.notification_name(row.request.notification_key) %></td>
+            <td><%= render "category", category: row.request.category %></td>
+            <td><%= NotificationHistory::Status.channel_name(row.delivery&.channel) %></td>
+            <td><span class="badge badge--<%= row.status.tone %>"><%= row.status.text %></span></td>
+            <td class="actions"><%= link_to t(".detail"), notification_history_path(row.request.id) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <% if @page.next_cursor %>
+    <nav class="pagination">
+      <%= link_to t(".older"), notification_history_index_path(@filters.to_query.merge(before: @page.next_cursor)),
+                  class: "button button--secondary" %>
+    </nav>
+  <% end %>
+<% end %>

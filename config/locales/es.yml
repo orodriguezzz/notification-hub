@@ -1,0 +1,141 @@
+# Textos de la interfaz en español neutro. Las traducciones base de Rails (validaciones,
+# meses, días) vienen de la gema rails-i18n.
+es:
+  date:
+    formats:
+      month_year: "%B de %Y"
+  time:
+    formats:
+      history: "%d-%m-%Y %H:%M"
+
+  roles:
+    company_admin: "Administrador"
+    member: "Colaborador"
+
+  layout:
+    app_name: "Central de notificaciones"
+    dev_user: "Usuario (simulado):"
+    no_user: "Sin sesión"
+
+  auth:
+    sign_in_required: "Selecciona un usuario administrador en la parte superior para ver el historial de su empresa."
+    forbidden: "No tienes permiso para ver esta página."
+
+  api_docs:
+    show:
+      title: "Endpoints · Central de notificaciones"
+
+  dev_sessions:
+    signed_in: "Sesión iniciada como %{name}."
+    signed_out: "Sesión cerrada."
+
+  notification_history:
+    # La categoría define por qué canales sale la notificación (config/notifications/channel_policy.rb)
+    categories:
+      critical:
+        name: "Crítica"
+        description: "Siempre se envía, a cualquier hora y aunque el colaborador se haya desuscrito. Si un canal falla, se intenta el siguiente."
+      operational:
+        name: "Operativa"
+        description: "Se envía por el primer canal disponible, con un límite diario. De noche se programa para las 08:00."
+      engagement:
+        name: "Relacionamiento"
+        description: "Se envía por el primer canal disponible si el colaborador no se desuscribió, con un límite diario. El excedente va al resumen diario."
+    channels:
+      email: "Correo electrónico"
+      sms: "SMS"
+      whatsapp: "WhatsApp"
+      slack: "Slack"
+      none: "—"
+    statuses:
+      delivered: "Entregada"
+      sent: "Enviada"
+      in_progress: "En proceso"
+      digested: "Incluida en el resumen diario"
+      digest_pending: "Se incluirá en el resumen diario"
+      scheduled: "Programada para las 08:00"
+      rate_limited: "Postergada por límite diario"
+      bounced: "No entregada: la dirección rebotó"
+      dropped: "No entregada: el proveedor descartó el correo"
+      failed: "No enviada: el proveedor rechazó el envío"
+      no_channel: "No enviada: el colaborador no tiene un canal disponible"
+      opted_out: "No enviada: el colaborador se desuscribió"
+      cooldown: "No enviada: ya se le envió hace poco"
+      entity_missing: "No enviada: el dato de origen ya no existe"
+      expired: "No enviada: venció antes de poder enviarse"
+    events:
+      enqueued: "Notificación registrada"
+      sent: "Enviada al proveedor de correo"
+      delivered: "Entregada en la bandeja del colaborador"
+      opened: "El colaborador abrió el correo"
+      clicked: "El colaborador hizo clic en el correo"
+      bounced: "La dirección rebotó"
+      dropped: "El proveedor descartó el correo"
+      spam_report: "El colaborador marcó el correo como spam"
+      unsubscribed: "El colaborador se desuscribió"
+      fallback_triggered: "Se intentó por otro canal"
+      throttled: "No enviada por el límite de envíos"
+      deferred: "Postergada"
+      digested: "Incluida en el resumen diario"
+      expired: "Venció antes de poder enviarse"
+      failed: "Falló el envío"
+      skipped: "No enviada"
+      undeliverable: "Sin canal disponible para el colaborador"
+    index:
+      title: "Historial de notificaciones"
+      intro: "Revisa si las notificaciones a los colaboradores de %{company} se enviaron y por qué. Se muestran los últimos 90 días."
+      empty: "No hay notificaciones con estos filtros."
+      out_of_window: "Para consultas de más de 90 días, contacta a soporte."
+      deleted_employee: "Colaborador eliminado"
+      detail: "Ver detalle"
+      older: "Ver más antiguas"
+      columns:
+        date: "Fecha"
+        employee: "Colaborador"
+        type: "Notificación"
+        category: "Categoría"
+        channel: "Canal"
+        status: "Estado"
+      filters:
+        employee: "Colaborador"
+        employee_placeholder: "Nombre o email"
+        from: "Desde"
+        to: "Hasta"
+        type: "Tipo de notificación"
+        status: "Estado"
+        all: "Todos"
+        submit: "Filtrar"
+      status_filters:
+        delivered: "Entregadas"
+        sent: "Enviadas"
+        not_delivered: "No entregadas"
+        deferred: "Postergadas"
+        digested: "En resumen diario"
+        not_sent: "No enviadas"
+        in_progress: "En proceso"
+    show:
+      title: "Detalle de la notificación"
+      back: "← Volver al historial"
+      employee: "Colaborador"
+      category: "Categoría"
+      channel: "Canal"
+      status: "Estado"
+      requested_at: "Registrada"
+      scheduled_at: "Programada para"
+      subject: "Asunto"
+      timeline: "Línea de tiempo"
+    forbidden:
+      body: "El historial de notificaciones está disponible solo para administradores de la empresa."
+
+  unsubscribes:
+    show:
+      title: "Dejar de recibir correos"
+      body: "Hola %{name}: si confirmas, dejarás de recibir correos de saludos, recordatorios y novedades. Seguirás recibiendo los avisos importantes, como tus liquidaciones y documentos firmados."
+      confirm: "Confirmar desuscripción"
+    done:
+      title: "Listo, te desuscribiste"
+      body: "Ya no recibirás correos de saludos, recordatorios ni novedades."
+    invalid:
+      title: "Enlace no válido"
+      body: "El enlace de desuscripción no es válido o fue modificado."
+

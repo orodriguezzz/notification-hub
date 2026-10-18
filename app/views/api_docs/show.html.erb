@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= t(".title") %></title>
+    <%# Swagger UI desde su CDN, con versión fija: no agrega gemas al proyecto %>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css">
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js" crossorigin></script>
+    <script>
+      window.ui = SwaggerUIBundle({
+        url: "<%= api_docs_spec_path %>",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        // Envía la cookie de sesión: el historial usa el usuario elegido en la página principal
+        requestInterceptor: (request) => { request.credentials = "same-origin"; return request }
+      })
+    </script>
+  </body>
+</html>

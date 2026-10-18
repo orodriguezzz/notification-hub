@@ -1,0 +1,4 @@
+<%= render layout: "notifications/email/layouts/frame", locals: { subject: subject, accent: "#db2777" } do %>
+  <p style="margin:0 0 8px 0;font-size:40px;line-height:1;" aria-hidden="true">🎉</p>
+  <%= render "notifications/email/layouts/content", content: content, accent: "#db2777" %>
+<% end %>

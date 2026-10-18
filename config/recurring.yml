@@ -1,0 +1,15 @@
+# Tareas recurrentes de Solid Queue.
+# No hace falta limpiar jobs terminados: preserve_finished_jobs = false (la auditoría vive en notification_events).
+production: &recurring
+  notification_digest:
+    class: Notifications::DigestJob
+    schedule: every hour
+  notification_partitions:
+    class: Notifications::PartitionMaintenanceJob   # crea particiones de los próximos 2 meses
+    schedule: every day at 3am
+  notification_purge:
+    class: Notifications::PurgeJob                  # borra claves de idempotencia vencidas y contadores > 7 días;
+    schedule: every day at 4am                      # registra (sin borrar) particiones > 90 días listas para archivar
+
+development:
+  <<: *recurring

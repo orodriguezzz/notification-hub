@@ -1,0 +1,49 @@
+<% notification_request = @detail[:request] %>
+<% zone = @scope.zone %>
+<% content_for :title, t(".title") %>
+
+<p><%= link_to t(".back"), notification_history_index_path %></p>
+<h1><%= NotificationHistory::Status.notification_name(notification_request.notification_key) %></h1>
+
+<div class="card">
+  <dl class="details">
+    <dt><%= t(".employee") %></dt>
+    <dd><%= @detail[:employee]&.full_name || t("notification_history.index.deleted_employee") %></dd>
+
+    <dt><%= t(".category") %></dt>
+    <dd>
+      <%= render "category", category: notification_request.category %>
+      <span class="muted"><%= t("notification_history.categories.#{notification_request.category}.description") %></span>
+    </dd>
+
+    <dt><%= t(".channel") %></dt>
+    <dd><%= @detail[:deliveries].map { NotificationHistory::Status.channel_name(_1.channel) }.uniq.join(", ").presence ||
+            NotificationHistory::Status.channel_name(nil) %></dd>
+
+    <dt><%= t(".status") %></dt>
+    <dd><span class="badge badge--<%= @detail[:status].tone %>"><%= @detail[:status].text %></span></dd>
+
+    <dt><%= t(".requested_at") %></dt>
+    <dd><%= l(notification_request.created_at.in_time_zone(zone), format: :history) %></dd>
+
+    <% if notification_request.deferred? && notification_request.scheduled_at %>
+      <dt><%= t(".scheduled_at") %></dt>
+      <dd><%= l(notification_request.scheduled_at.in_time_zone(zone), format: :history) %></dd>
+    <% end %>
+
+    <% @detail[:deliveries].each do |delivery| %>
+      <dt><%= t(".subject") %></dt>
+      <dd><%= delivery.subject %></dd>
+    <% end %>
+  </dl>
+</div>
+
+<h2><%= t(".timeline") %></h2>
+<ol class="timeline">
+  <% @detail[:events].each do |event| %>
+    <li>
+      <time datetime="<%= event.occurred_at.iso8601 %>"><%= l(event.occurred_at.in_time_zone(zone), format: :history) %></time>
+      <%= NotificationHistory::Status.event_label(event) %>
+    </li>
+  <% end %>
+</ol>

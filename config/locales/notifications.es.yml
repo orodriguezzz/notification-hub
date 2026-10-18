@@ -1,0 +1,40 @@
+# Contenido de las notificaciones. `name` es el nombre legible que ve el administrador en el historial.
+# t(".x") dentro de una definición resuelve a notifications.<key>.x
+es:
+  notifications:
+    birthday:
+      name: "Saludo de cumpleaños"
+      title: "¡Feliz cumpleaños, %{name}!"
+      body: "Todo el equipo de %{company} te desea un excelente día."
+      action: "Ver saludos"
+    signed_document_copy:
+      name: "Copia de documento firmado"
+      subject: "Copia de tu documento firmado: %{title}"
+      title: "Copia de tu documento firmado"
+      body: "Firmaste el documento «%{title}» el %{signed_at}. Guarda este correo como respaldo."
+      action: "Ver documento"
+    payslip_available:
+      name: "Liquidación de sueldo disponible"
+      title: "Tu liquidación de %{period} está disponible"
+      body: "Ya puedes revisar y descargar tu liquidación de sueldo de %{period}."
+      action: "Ver liquidación"
+    leave_request_approved:
+      name: "Vacaciones aprobadas"
+      title: "Tus vacaciones fueron aprobadas"
+      body: "Tu solicitud de vacaciones del %{starts_on} al %{ends_on} fue aprobada por %{approver}."
+      action: "Ver solicitud"
+    survey_reminder:
+      name: "Recordatorio de encuesta"
+      title: "Recuerda responder la encuesta «%{survey}»"
+      body: "%{name}, tu opinión es importante para nosotros. Responder te tomará solo unos minutos."
+      action: "Responder encuesta"
+    daily_digest:
+      name: "Resumen diario"
+    digest:
+      subject:
+        one: "Tienes 1 novedad"
+        other: "Tienes %{count} novedades"
+      intro: "Este es el resumen de tus novedades."
+      unsubscribe: "¿No quieres recibir estos correos? Desuscríbete aquí."
+    email:
+      footer: "Este correo fue enviado automáticamente. Por favor no lo respondas."

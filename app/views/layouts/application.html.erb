@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <title><%= content_for(:title) || t("layout.app_name") %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="<%= t("layout.app_name") %>">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="topbar__inner">
+        <%= link_to t("layout.app_name"), root_path, class: "brand" %>
+        <nav class="topbar__nav"></nav>
+        <% if Rails.configuration.x.demo_mode %>
+          <%= form_with url: dev_session_path, method: :post, class: "user-switch", data: { turbo: false } do |f| %>
+            <label for="user_id" class="user-switch__label"><%= t("layout.dev_user") %></label>
+            <%= f.select :user_id,
+                  options_from_collection_for_select(selectable_users, :id,
+                    ->(u) { "#{u.name} · #{u.company.name} (#{t("roles.#{u.role}")})" }, current_user&.id),
+                  { include_blank: t("layout.no_user") },
+                  id: "user_id", onchange: "this.form.requestSubmit()" %>
+          <% end %>
+        <% end %>
+      </div>
+    </header>
+
+    <main class="container">
+      <% flash.each do |type, message| %>
+        <div class="flash flash--<%= type %>" role="status"><%= message %></div>
+      <% end %>
+      <%= yield %>
+    </main>
+  </body>
+</html>

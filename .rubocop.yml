@@ -1,0 +1,11 @@
+# Omakase Ruby styling for Rails
+inherit_gem: { rubocop-rails-omakase: rubocop.yml }
+
+# Cop propio de la central de notificaciones
+require:
+  - ./lib/rubocop/cop/notifications/no_deliver_in_controllers.rb
+
+Notifications/NoDeliverInControllers:
+  Enabled: true
+  Include:
+    - "app/controllers/**/*.rb"

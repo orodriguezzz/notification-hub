@@ -1,0 +1,306 @@
+openapi: 3.1.0
+info:
+  title: Central de notificaciones
+  version: "1.0"
+  description: |
+    Endpoints HTTP de la central de notificaciones.
+
+    **La API principal de la central no es HTTP**: los módulos la usan en Ruby, dentro de su transacción
+    (outbox transaccional). Por ejemplo:
+
+    ```ruby
+    handle = PayslipAvailableNotification.deliver(to: employee, params: { period: Date.new(2026, 9, 1) })
+    handle.id      # uuid del request
+    handle.status  # :accepted | :duplicate
+    ```
+
+    Lo que se documenta aquí es lo que se expone por HTTP: el historial para el administrador de cada
+    empresa, el Event Webhook de SendGrid y la desuscripción.
+
+    **Cómo probar el historial desde aquí:** primero elige un usuario administrador en el selector de la
+    página principal (`/`); Swagger UI envía la misma cookie de sesión. Las respuestas del historial son HTML.
+servers:
+  - url: /
+    description: Este servidor
+
+tags:
+  - name: Historial
+    description: Historial de notificaciones para el administrador de cada empresa cliente (últimos 90 días).
+  - name: Webhooks
+    description: Eventos del proveedor de email.
+  - name: Desuscripción
+    description: Enlace firmado que reciben los colaboradores en los correos de relacionamiento.
+  - name: Sistema
+    description: Salud de la aplicación.
+  - name: Desarrollo
+    description: Solo en local. Simula el usuario autenticado (la autenticación real queda fuera de alcance).
+
+paths:
+  /historial-notificaciones:
+    get:
+      tags: [Historial]
+      summary: Lista las notificaciones de la empresa del usuario
+      description: |
+        Solo para usuarios con rol `company_admin`; todas las consultas se filtran por su empresa.
+        Cada consulta queda registrada en la meta-auditoría (`notification_history_accesses`).
+        Si `from` es anterior a la ventana de 90 días, no se consulta la base de datos y se muestra el
+        mensaje "Para consultas de más de 90 días, contacta a soporte".
+        La raíz `/` muestra lo mismo.
+      operationId: listNotificationHistory
+      parameters:
+        - name: employee
+          in: query
+          description: Nombre o email del colaborador (búsqueda parcial).
+          schema: { type: string }
+          example: ana
+        - name: from
+          in: query
+          description: Desde (fecha local de la empresa, incluida).
+          schema: { type: string, format: date }
+          example: "2026-10-01"
+        - name: to
+          in: query
+          description: Hasta (fecha local de la empresa, incluida).
+          schema: { type: string, format: date }
+          example: "2026-10-31"
+        - name: notification_key
+          in: query
+          description: Tipo de notificación.
+          schema:
+            type: string
+            enum: [birthday, leave_request_approved, payslip_available, signed_document_copy, survey_reminder]
+        - name: status
+          in: query
+          description: Estado en lenguaje simple.
+          schema:
+            $ref: "#/components/schemas/StatusFilter"
+        - name: before
+          in: query
+          description: Cursor de paginación (lo entrega el enlace "Ver más antiguas"). Sin OFFSET.
+          schema: { type: string }
+          example: "2026-10-15T18:03:38.886992Z|01a14097-6efa-7d54-bcbb-8b82e2f1588e"
+      responses:
+        "200":
+          description: Página HTML con la tabla (fecha, colaborador, notificación, categoría, canal y estado).
+          content:
+            text/html:
+              schema: { type: string }
+        "401":
+          description: No hay un usuario en la sesión.
+          content:
+            text/html:
+              schema: { type: string }
+        "403":
+          description: El usuario no es administrador de la empresa (rol `member`).
+          content:
+            text/html:
+              schema: { type: string }
+
+  /historial-notificaciones/{id}:
+    get:
+      tags: [Historial]
+      summary: Detalle de una notificación
+      description: |
+        Muestra categoría, canal, estado, asunto (nunca el cuerpo) y la línea de tiempo de eventos en la
+        zona horaria de la empresa. Un id de otra empresa responde 404 (no 403) para no revelar que existe.
+      operationId: showNotificationHistory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Id del request de notificación (uuid v7).
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Página HTML con el detalle y la línea de tiempo.
+          content:
+            text/html:
+              schema: { type: string }
+        "401":
+          description: No hay un usuario en la sesión.
+        "403":
+          description: El usuario no es administrador de la empresa.
+        "404":
+          description: No existe, es de otra empresa o tiene más de 90 días.
+
+  /webhooks/sendgrid:
+    post:
+      tags: [Webhooks]
+      summary: Event Webhook firmado de SendGrid
+      description: |
+        Verifica la firma ECDSA con la clave pública de `SENDGRID_WEBHOOK_PUBLIC_KEY` y encola el lote en
+        `Notifications::WebhookEventsJob` para responder rápido. Cada evento se asocia a la entrega por
+        `delivery_id` (de `custom_args`). El procesamiento es idempotente por `sg_event_id`.
+
+        | Evento SendGrid | Efecto |
+        |---|---|
+        | `delivered` | entrega → `delivered` |
+        | `bounce` | entrega → `bounced`; si es crítica, intenta el siguiente canal (fallback) |
+        | `dropped` | entrega → `dropped` |
+        | `open`, `click` | solo se registra el evento |
+        | `spamreport`, `unsubscribe` | evento + el colaborador queda desuscrito de relacionamiento |
+
+        Desde aquí, sin una firma real, la respuesta esperada es 401.
+      operationId: receiveSendgridEvents
+      parameters:
+        - name: X-Twilio-Email-Event-Webhook-Signature
+          in: header
+          required: true
+          description: Firma ECDSA (base64) de `timestamp + body`.
+          schema: { type: string }
+        - name: X-Twilio-Email-Event-Webhook-Timestamp
+          in: header
+          required: true
+          schema: { type: string }
+          example: "1760551200"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/SendgridEvent"
+            example:
+              - event: delivered
+                sg_event_id: "sg-123"
+                timestamp: 1760551200
+                email: ana.rojas@acme.cl
+                delivery_id: "01a14097-712e-7828-b990-1f4f321c6292"
+                request_id: "01a14097-70fe-78f2-9d33-2687456bd710"
+      responses:
+        "202":
+          description: Lote aceptado y encolado.
+        "400":
+          description: El cuerpo no es un arreglo JSON.
+        "401":
+          description: Firma ausente o inválida.
+
+  /unsubscribe/{token}:
+    get:
+      tags: [Desuscripción]
+      summary: Confirmación de desuscripción
+      description: |
+        Muestra la confirmación; no desuscribe (así el prefetch de enlaces de los clientes de correo no
+        desuscribe por accidente). Alias en español: `/desuscribir/{token}`.
+      operationId: showUnsubscribe
+      parameters:
+        - $ref: "#/components/parameters/UnsubscribeToken"
+      responses:
+        "200":
+          description: Página HTML de confirmación.
+          content:
+            text/html:
+              schema: { type: string }
+        "404":
+          description: Token inválido o alterado.
+    post:
+      tags: [Desuscripción]
+      summary: Desuscribir (one-click)
+      description: |
+        Agrega la categoría `engagement` (relacionamiento) a las desactivadas del colaborador. Lo usan el
+        botón de confirmación y los clientes de correo vía `List-Unsubscribe-Post: List-Unsubscribe=One-Click`
+        (sin token CSRF). Las notificaciones críticas y operativas se siguen enviando.
+        Alias en español: `/desuscribir/{token}`.
+      operationId: unsubscribe
+      parameters:
+        - $ref: "#/components/parameters/UnsubscribeToken"
+      responses:
+        "200":
+          description: Desuscripción hecha (página HTML).
+          content:
+            text/html:
+              schema: { type: string }
+        "404":
+          description: Token inválido o alterado.
+
+  /up:
+    get:
+      tags: [Sistema]
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        "200":
+          description: La aplicación arrancó sin errores.
+        "500":
+          description: La aplicación no arrancó.
+
+  /dev/session:
+    post:
+      tags: [Desarrollo]
+      summary: Elegir el usuario simulado
+      description: |
+        Solo en local. Lo usa el selector de usuario de la parte superior de la página. Requiere el token
+        CSRF del formulario, así que desde Swagger UI responde 422: usa el selector de la página principal.
+      operationId: createDevSession
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id: { type: integer }
+      responses:
+        "302":
+          description: Sesión iniciada; redirige al historial.
+    delete:
+      tags: [Desarrollo]
+      summary: Cerrar la sesión simulada
+      operationId: destroyDevSession
+      responses:
+        "302":
+          description: Sesión cerrada.
+
+components:
+  parameters:
+    UnsubscribeToken:
+      name: token
+      in: path
+      required: true
+      description: Token firmado (MessageVerifier) que viene en el header List-Unsubscribe del correo.
+      schema: { type: string }
+
+  schemas:
+    StatusFilter:
+      type: string
+      description: |
+        - `delivered`: Entregadas
+        - `sent`: Enviadas (aún sin confirmación de entrega)
+        - `not_delivered`: No entregadas (rebote, descarte o error del proveedor)
+        - `deferred`: Postergadas (horario de silencio, límite diario o resumen diario)
+        - `digested`: Incluidas en el resumen diario
+        - `not_sent`: No enviadas (desuscrito, sin canal, ya enviada hace poco o vencida)
+        - `in_progress`: En proceso
+      enum: [delivered, sent, not_delivered, deferred, digested, not_sent, in_progress]
+
+    SendgridEvent:
+      type: object
+      required: [event, delivery_id]
+      properties:
+        event:
+          type: string
+          enum: [processed, delivered, bounce, dropped, deferred, open, click, spamreport, unsubscribe, group_unsubscribe]
+        sg_event_id:
+          type: string
+          description: Id único del evento en SendGrid (idempotencia).
+        timestamp:
+          type: integer
+          description: Epoch en segundos.
+        email:
+          type: string
+          format: email
+        delivery_id:
+          type: string
+          format: uuid
+          description: Viene en `custom_args`; identifica la entrega de la central.
+        request_id:
+          type: string
+          format: uuid
+          description: Viene en `custom_args`; identifica el request de la central.
+        reason:
+          type: string
+          description: Motivo del rebote o descarte.
+        url:
+          type: string
+          description: URL del clic.
