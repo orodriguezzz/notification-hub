@@ -51,6 +51,12 @@ Rails.application.configure do
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
 
+  # Llaves de cifrado solo para tests (no protegen nada real): el CI no necesita la master key,
+  # y funciona también en los PR de Dependabot y de forks, que no reciben los secrets del repo.
+  config.active_record.encryption.primary_key = "test-only-primary-key-not-a-secret"
+  config.active_record.encryption.deterministic_key = "test-only-deterministic-key-not-a-secret"
+  config.active_record.encryption.key_derivation_salt = "test-only-key-derivation-salt-not-a-secret"
+
   # Central de notificaciones: los correos quedan en memoria (TestAdapter.deliveries)
   config.x.notifications.email_adapter = :test
   config.x.app_host = "http://test.host"
