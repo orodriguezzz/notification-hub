@@ -102,7 +102,12 @@ module Notifications
 
     # Copia profunda, útil para cambiar la política en un test sin afectar a los demás
     def deep_copy
-      Marshal.load(Marshal.dump(self))
+      copy = Policy.new
+      rules.each { |name, rule| copy.rules[name] = rule.dup.tap { _1.channels = rule.channels.dup } }
+      rate_limits.each { |name, limit| copy.rate_limits[name] = limit.dup }
+      copy.quiet_hours = quiet_hours&.dup&.tap { _1.except = Array(quiet_hours.except).dup }
+      copy.shadow_mode = shadow_mode
+      copy
     end
 
     class Builder
