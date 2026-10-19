@@ -5,8 +5,15 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+  # Mismo formato que el resto del historial: "chore(deps): bump ..."
+  commit-message:
+    prefix: "chore"
+    include: "scope"
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+  commit-message:
+    prefix: "chore"
+    include: "scope"
