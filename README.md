@@ -36,8 +36,6 @@ No se usa Redis: la cola es Solid Queue en la base principal.
    sudo apt install postgresql-client-18 # Debian/Ubuntu (repositorio PGDG)
    ```
 
-   En Windows con RubyInstaller: `ridk exec pacman -S --needed mingw-w64-ucrt-x86_64-postgresql` y luego `ridk enable`.
-
 3. Dependencias, base y datos de ejemplo (2 empresas, 50 colaboradores, un administrador y un miembro por empresa, y unas 30 notificaciones ya despachadas para ver el historial):
 
    ```bash
