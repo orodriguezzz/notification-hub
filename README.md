@@ -12,7 +12,7 @@ Monolito Rails 8.1 que centraliza las notificaciones de la plataforma:
 
 | Componente | Versión |
 |---|---|
-| Ruby | 3.4 (en Windows: RubyInstaller con DevKit) |
+| Ruby | 3.4 |
 | PostgreSQL | 18 (se usa `uuidv7()`) |
 | Cliente `psql` / `pg_dump` | 18 (para `db/structure.sql`) |
 
@@ -29,12 +29,14 @@ No se usa Redis: la cola es Solid Queue en la base principal.
 
    La conexión se configura con `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USERNAME` y `DATABASE_PASSWORD` (por defecto `localhost:5436`, `postgres/postgres`). `DATABASE_URL` también funciona.
 
-2. En Windows, deja `pg_dump` 18 en el PATH. Con RubyInstaller se instala desde MSYS2:
+2. Deja el cliente de PostgreSQL 18 (`psql` / `pg_dump`) en el PATH:
 
-   ```powershell
-   ridk exec pacman -S --needed mingw-w64-ucrt-x86_64-postgresql
-   ridk enable   # agrega C:\Ruby34-x64\msys64\ucrt64\bin al PATH de la sesión
+   ```bash
+   brew install postgresql@18            # macOS
+   sudo apt install postgresql-client-18 # Debian/Ubuntu (repositorio PGDG)
    ```
+
+   En Windows con RubyInstaller: `ridk exec pacman -S --needed mingw-w64-ucrt-x86_64-postgresql` y luego `ridk enable`.
 
 3. Dependencias, base y datos de ejemplo (2 empresas, 50 colaboradores, un administrador y un miembro por empresa, y unas 30 notificaciones ya despachadas para ver el historial):
 
