@@ -31,10 +31,10 @@ module Notifications
                                      .where(updated_at: ...threshold).find_by(id: id)
         next false unless request
 
-        if request.status_reason == "digest"
+        if request.status_reason == Reasons::DIGEST
           request.update!(status: "deferred")
         else
-          request.update!(status: "accepted", status_reason: "recovered")
+          request.update!(status: "accepted", status_reason: Reasons::RECOVERED)
           DispatchJob.set(queue: Notifications.queue_for(request.category)).perform_later(request.id)
         end
         NotificationEvent.record!(:recovered, request: request, payload: { stale_since: request.updated_at_before_last_save })

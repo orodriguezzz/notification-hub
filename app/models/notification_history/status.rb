@@ -19,10 +19,10 @@ module NotificationHistory
     # Filtro de estado (valor del select -> condición SQL)
     FILTERS = {
       "delivered" => ->(r) { r.completed.where(delivery_exists(%w[delivered])) },
-      "sent" => ->(r) { r.completed.where.not(status_reason: "digested").where(delivery_exists(%w[sent pending])) },
+      "sent" => ->(r) { r.completed.where.not(status_reason: Notifications::Reasons::DIGESTED).where(delivery_exists(%w[sent pending])) },
       "not_delivered" => ->(r) { r.where(status: %w[undeliverable failed]).or(r.where(delivery_exists(%w[bounced dropped]))) },
       "deferred" => ->(r) { r.deferred },
-      "digested" => ->(r) { r.completed.where(status_reason: "digested") },
+      "digested" => ->(r) { r.completed.where(status_reason: Notifications::Reasons::DIGESTED) },
       "not_sent" => ->(r) { r.where(status: %w[skipped expired]) },
       "in_progress" => ->(r) { r.where(status: %w[accepted processing]) }
     }.freeze
@@ -39,17 +39,19 @@ module NotificationHistory
 
       case request.status
       when "completed"
-        return :digested if reason == "digested"
+        return :digested if reason == Notifications::Reasons::DIGESTED
 
         { "delivered" => :delivered, "bounced" => :bounced, "dropped" => :dropped, "failed" => :failed }
           .fetch(delivery&.status, :sent)
       when "deferred"
-        { "quiet_hours" => :scheduled, "rate_limit" => :rate_limited, "digest" => :digest_pending }
+        { Notifications::Reasons::QUIET_HOURS => :scheduled, Notifications::Reasons::RATE_LIMIT => :rate_limited,
+          Notifications::Reasons::DIGEST => :digest_pending }
           .fetch(reason, :scheduled)
       when "skipped"
-        { "opted_out" => :opted_out, "cooldown" => :cooldown, "entity_missing" => :entity_missing }
+        { Notifications::Reasons::OPTED_OUT => :opted_out, Notifications::Reasons::COOLDOWN => :cooldown,
+          Notifications::Reasons::ENTITY_MISSING => :entity_missing }
           .fetch(reason, :no_channel)
-      when "undeliverable" then reason == "bounced" ? :bounced : :no_channel
+      when "undeliverable" then reason == Notifications::Reasons::BOUNCED ? :bounced : :no_channel
       when "expired" then :expired
       when "failed" then :failed
       else :in_progress

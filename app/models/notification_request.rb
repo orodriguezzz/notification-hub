@@ -22,6 +22,6 @@ class NotificationRequest < ApplicationRecord
   end
 
   def digest_pending?
-    deferred? && status_reason == "digest"
+    deferred? && status_reason == Notifications::Reasons::DIGEST
   end
 end

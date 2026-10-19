@@ -10,11 +10,11 @@ module Notifications
       # Motivo resumido cuando no queda ningún canal
       def skip_reason
         values = reasons.values
-        return "opted_out" if values.include?("opted_out")
-        return "no_contact" if values.include?("no_contact")
-        return "channel_disabled" if values.any? { _1.start_with?("disabled") }
+        return Reasons::OPTED_OUT if values.include?(Reasons::OPTED_OUT)
+        return Reasons::NO_CONTACT if values.include?(Reasons::NO_CONTACT)
+        return Reasons::CHANNEL_DISABLED if values.any? { _1.start_with?("disabled") }
 
-        "no_channel"
+        Reasons::NO_CHANNEL
       end
     end
 
@@ -44,10 +44,10 @@ module Notifications
       setting = NotificationChannelSetting.unavailability_for(channel, company_id: company_id)
       return setting.to_s if setting
 
-      return "no_contact" if Channels::Registry.fetch(channel).adapter.contact_for(recipient).blank?
+      return Reasons::NO_CONTACT if Channels::Registry.fetch(channel).adapter.contact_for(recipient).blank?
 
       if !rule.bypass_preferences? && recipient.respond_to?(:opted_out?) && recipient.opted_out?(rule.name)
-        return "opted_out"
+        return Reasons::OPTED_OUT
       end
 
       nil

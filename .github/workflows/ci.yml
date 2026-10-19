@@ -85,7 +85,7 @@ jobs:
       - name: Install packages
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y libpq-dev libvips postgresql-common
+          sudo apt-get install --no-install-recommends -y libpq-dev postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install --no-install-recommends -y postgresql-client-18
 

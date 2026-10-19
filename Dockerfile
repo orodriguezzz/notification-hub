@@ -16,7 +16,7 @@ WORKDIR /rails
 
 # Install base packages. El cliente psql 18 (repo de PostgreSQL) carga db/structure.sql, generado con pg_dump 18.
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl ca-certificates libjemalloc2 libvips postgresql-common && \
+    apt-get install --no-install-recommends -y curl ca-certificates libjemalloc2 postgresql-common && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
     apt-get install --no-install-recommends -y postgresql-client-18 && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
@@ -34,7 +34,7 @@ FROM base AS build
 
 # Install packages needed to build gems
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libpq-dev libvips libyaml-dev pkg-config && \
+    apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Install application gems

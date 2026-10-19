@@ -197,7 +197,6 @@ CREATE TABLE public.notification_deliveries (
     subject text,
     body_text text,
     content_hash character varying,
-    html_ref character varying,
     status character varying DEFAULT 'pending'::character varying NOT NULL,
     decision_reason jsonb DEFAULT '{}'::jsonb NOT NULL,
     attempts integer DEFAULT 0 NOT NULL,
@@ -228,7 +227,6 @@ CREATE TABLE public.notification_deliveries_2026_10 (
     subject text,
     body_text text,
     content_hash character varying,
-    html_ref character varying,
     status character varying DEFAULT 'pending'::character varying CONSTRAINT notification_deliveries_status_not_null NOT NULL,
     decision_reason jsonb DEFAULT '{}'::jsonb CONSTRAINT notification_deliveries_decision_reason_not_null NOT NULL,
     attempts integer DEFAULT 0 CONSTRAINT notification_deliveries_attempts_not_null NOT NULL,
@@ -258,7 +256,6 @@ CREATE TABLE public.notification_deliveries_2026_11 (
     subject text,
     body_text text,
     content_hash character varying,
-    html_ref character varying,
     status character varying DEFAULT 'pending'::character varying CONSTRAINT notification_deliveries_status_not_null NOT NULL,
     decision_reason jsonb DEFAULT '{}'::jsonb CONSTRAINT notification_deliveries_decision_reason_not_null NOT NULL,
     attempts integer DEFAULT 0 CONSTRAINT notification_deliveries_attempts_not_null NOT NULL,
@@ -288,7 +285,6 @@ CREATE TABLE public.notification_deliveries_2026_12 (
     subject text,
     body_text text,
     content_hash character varying,
-    html_ref character varying,
     status character varying DEFAULT 'pending'::character varying CONSTRAINT notification_deliveries_status_not_null NOT NULL,
     decision_reason jsonb DEFAULT '{}'::jsonb CONSTRAINT notification_deliveries_decision_reason_not_null NOT NULL,
     attempts integer DEFAULT 0 CONSTRAINT notification_deliveries_attempts_not_null NOT NULL,
@@ -2372,6 +2368,7 @@ ALTER TABLE ONLY public.notification_history_accesses
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261019000001'),
 ('20261016000001'),
 ('20261015000009'),
 ('20261015000008'),

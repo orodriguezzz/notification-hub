@@ -90,6 +90,21 @@ class Notifications::ChannelPolicyTest < ActiveSupport::TestCase
     assert_includes event_types_for(request), "fallback_triggered"
   end
 
+  test "fallback también en un reintento: si el reintento falla de forma definitiva, sale por el siguiente canal" do
+    use_policy(shadow_mode: true) { |policy| policy.rule_for(:critical).channels = [ :email, :fake_sms ] }
+    handle = deliver_signed_copy(employees(:ana))
+
+    Notifications::Channels::Email::TestAdapter.fail_next!(Notifications::TransientDeliveryError, "503")
+    assert_raises(Notifications::TransientDeliveryError) { Notifications::Dispatcher.call(handle.id) }
+
+    Notifications::Channels::Email::TestAdapter.fail_next!(Notifications::PermanentDeliveryError, "550 buzón inexistente")
+    request = dispatch(handle)
+
+    assert_equal "completed", request.status
+    assert_equal Notifications::Reasons::FALLBACK, request.status_reason
+    assert_equal %w[email:failed fake_sms:sent], request.deliveries.order(:id).map { "#{_1.channel}:#{_1.status}" }
+  end
+
   test "first_available no intenta otros canales" do
     use_policy(shadow_mode: true) { |policy| policy.rule_for(:operational).channels = [ :email, :fake_sms ] }
     Notifications::Channels::Email::TestAdapter.fail_next!(Notifications::PermanentDeliveryError, "400")

@@ -36,12 +36,14 @@ module Notifications
       request = NotificationRequest.find_by(id: @request_id)
       return unless request
 
-      request.deliveries.pending.find_each do |delivery|
-        delivery.update!(status: "failed", last_error: error.message)
-        NotificationEvent.record!(:failed, request: request, delivery: delivery,
-                                  payload: { error: error.message, retries_exhausted: true })
+      NotificationRequest.transaction do
+        request.deliveries.pending.find_each do |delivery|
+          delivery.update!(status: "failed", last_error: error.message)
+          NotificationEvent.record!(:failed, request: request, delivery: delivery,
+                                    payload: { error: error.message, retries_exhausted: true })
+        end
+        request.update!(status: "failed", status_reason: Reasons::RETRIES_EXHAUSTED)
       end
-      request.update!(status: "failed", status_reason: "retries_exhausted")
     end
 
     # Fallback: intenta el siguiente canal de la política tras una falla definitiva o un rebote.
@@ -63,7 +65,7 @@ module Notifications
       content = definition.build_content(params)
       resolution.channels.each do |channel|
         if deliver_via(request, definition, content, params, recipient, channel, { fallback_from: failed_channel }) == :sent
-          request.update!(status: "completed", status_reason: "fallback")
+          request.update!(status: "completed", status_reason: Reasons::FALLBACK)
           return :sent
         end
       end
@@ -102,13 +104,13 @@ module Notifications
       params = begin
         ParamSerializer.load(request.params)
       rescue ActiveJob::DeserializationError
-        return finish(request, "skipped", "entity_missing", event: :skipped)
+        return finish(request, "skipped", Reasons::ENTITY_MISSING, event: :skipped)
       end
 
       # El destinatario suele venir en los parámetros: evita volver a cargarlo
       recipient = params[definition.recipient] || request.recipient
-      return finish(request, "skipped", "entity_missing", event: :skipped) unless recipient
-      return finish(request, "expired", "expired", event: :expired) if request.expires_at&.past?
+      return finish(request, "skipped", Reasons::ENTITY_MISSING, event: :skipped) unless recipient
+      return finish(request, "expired", Reasons::EXPIRED, event: :expired) if request.expires_at&.past?
 
       # Reintento tras un error transitorio: se reenvía la entrega pendiente, sin volver a filtrar
       pending = request.deliveries.pending.order(:created_at).first
@@ -141,8 +143,7 @@ module Notifications
         NotificationEvent.record!(:fallback_triggered, request: request, payload: { from: channel, to: next_channel })
       end
 
-      finish(request, "failed", "provider_rejected")
-      alert_undeliverable(request, "provider_rejected") if request.category == "critical"
+      fail_request(request)
     end
 
     # Renderiza y entrega por un canal. Devuelve :sent o :failed; los errores transitorios se propagan.
@@ -176,8 +177,18 @@ module Notifications
       entry = Channels::Registry.fetch(delivery.channel)
       message = render(entry, definition, definition.build_content(params), params, recipient)
       delivery.update!(attempts: delivery.attempts + 1)
+      return if send_delivery(request, delivery, entry.adapter, message) == :sent
 
-      finish(request, "failed", "provider_rejected") if send_delivery(request, delivery, entry.adapter, message) == :failed
+      # Falla definitiva en un reintento: igual que en el primer intento, se prueba el canal siguiente
+      return if @policy.rule_for(request.category).fallback? && fallback_from(request, delivery.channel) == :sent
+
+      fail_request(request)
+    end
+
+    # Ningún canal pudo entregar: el request queda failed y, si es crítica, se alerta
+    def fail_request(request)
+      finish(request, "failed", Reasons::PROVIDER_REJECTED)
+      alert_undeliverable(request, Reasons::PROVIDER_REJECTED) if request.category == "critical"
     end
 
     def render(entry, definition, content, params, recipient)
@@ -197,14 +208,18 @@ module Notifications
       end
       :sent
     rescue PermanentDeliveryError => e
-      delivery.update!(status: "failed", last_error: e.message)
-      NotificationEvent.record!(:failed, request: request, delivery: delivery, payload: { error: e.message })
+      NotificationRequest.transaction do
+        delivery.update!(status: "failed", last_error: e.message)
+        NotificationEvent.record!(:failed, request: request, delivery: delivery, payload: { error: e.message })
+      end
       provider_error(request, delivery, e)
       :failed
     rescue TransientDeliveryError => e
       # Vuelve a quedar disponible para el reintento de retry_on
-      delivery.update!(last_error: e.message)
-      request.update!(status: "accepted", status_reason: "retrying")
+      NotificationRequest.transaction do
+        delivery.update!(last_error: e.message)
+        request.update!(status: "accepted", status_reason: Reasons::RETRYING)
+      end
       provider_error(request, delivery, e)
       raise
     end
@@ -221,7 +236,7 @@ module Notifications
 
     def drop(request, decision)
       if decision.reason == :expired
-        finish(request, "expired", "expired", event: :expired, payload: decision.as_json)
+        finish(request, "expired", Reasons::EXPIRED, event: :expired, payload: decision.as_json)
       else
         finish(request, "skipped", decision.reason.to_s, event: :throttled, payload: decision.as_json)
       end
@@ -239,8 +254,10 @@ module Notifications
 
     # Queda postergado; DigestJob lo incluirá en el resumen de las 08:00 locales
     def digest(request, decision)
-      request.update!(status: "deferred", status_reason: "digest", scheduled_at: decision.until_time)
-      NotificationEvent.record!(:deferred, request: request, payload: decision.as_json)
+      NotificationRequest.transaction do
+        request.update!(status: "deferred", status_reason: Reasons::DIGEST, scheduled_at: decision.until_time)
+        NotificationEvent.record!(:deferred, request: request, payload: decision.as_json)
+      end
     end
 
     def finish(request, status, reason = nil, event: nil, payload: {})

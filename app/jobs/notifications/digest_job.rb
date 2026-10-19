@@ -6,7 +6,7 @@ module Notifications
     queue_as :bulk
 
     def perform(now: Time.current)
-      due = NotificationRequest.deferred.where(status_reason: "digest", scheduled_at: ..now)
+      due = NotificationRequest.deferred.where(status_reason: Reasons::DIGEST, scheduled_at: ..now)
       due.distinct.pluck(:recipient_type, :recipient_id).each do |recipient_type, recipient_id|
         deliver_digest(recipient_type, recipient_id, now)
       end
@@ -19,10 +19,10 @@ module Notifications
       return if requests.empty?
 
       recipient = Recipients.find(recipient_type, recipient_id)
-      return finish_all(requests, "skipped", "entity_missing", :skipped) unless recipient
+      return finish_all(requests, "skipped", Reasons::ENTITY_MISSING, :skipped) unless recipient
 
       expired, live = requests.partition { |request| request.expires_at&.<=(now) }
-      finish_all(expired, "expired", "expired", :expired)
+      finish_all(expired, "expired", Reasons::EXPIRED, :expired)
       return if live.empty?
 
       resolution = ChannelResolver.new.call(category: :engagement, company_id: live.first.company_id, recipient: recipient)
@@ -40,7 +40,7 @@ module Notifications
     def claim(recipient_type, recipient_id, now)
       NotificationRequest.transaction do
         requests = NotificationRequest.deferred.lock("FOR UPDATE SKIP LOCKED")
-                                      .where(status_reason: "digest", scheduled_at: ..now,
+                                      .where(status_reason: Reasons::DIGEST, scheduled_at: ..now,
                                              recipient_type: recipient_type, recipient_id: recipient_id)
                                       .order(:created_at).to_a
         NotificationRequest.where(id: requests.map(&:id)).update_all(status: "processing", updated_at: now)
@@ -52,7 +52,7 @@ module Notifications
       contents = requests.filter_map do |request|
         request.definition.build_content(ParamSerializer.load(request.params))
       rescue ActiveJob::DeserializationError
-        finish_all([ request ], "skipped", "entity_missing", :skipped)
+        finish_all([ request ], "skipped", Reasons::ENTITY_MISSING, :skipped)
         nil
       end
       requests = requests.reject(&:skipped?)
@@ -76,12 +76,12 @@ module Notifications
       NotificationRequest.transaction do
         delivery.update!(status: "sent", provider_message_id: provider_message_id, sent_at: Time.current)
         NotificationEvent.record!(:sent, request: first, delivery: delivery, payload: { digest: true })
-        finish_all(requests, "completed", "digested", :digested, delivery_id: delivery.id)
+        finish_all(requests, "completed", Reasons::DIGESTED, :digested, delivery_id: delivery.id)
       end
     rescue PermanentDeliveryError => e
       NotificationRequest.transaction do
         delivery&.update!(status: "failed", last_error: e.message)
-        finish_all(requests, "failed", "provider_rejected", :failed)
+        finish_all(requests, "failed", Reasons::PROVIDER_REJECTED, :failed)
       end
     end
 

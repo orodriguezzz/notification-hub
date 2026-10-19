@@ -70,9 +70,9 @@ module Notifications
       return unless Notifications.policy.rule_for(request.category).fallback?
       return if dispatcher.fallback_from(request, delivery.channel) == :sent
 
-      request.update!(status: "undeliverable", status_reason: "bounced")
-      NotificationEvent.record!(:undeliverable, request: request, delivery: delivery, payload: { reason: "bounced" })
-      dispatcher.alert_undeliverable(request, "bounced")
+      request.update!(status: "undeliverable", status_reason: Reasons::BOUNCED)
+      NotificationEvent.record!(:undeliverable, request: request, delivery: delivery, payload: { reason: Reasons::BOUNCED })
+      dispatcher.alert_undeliverable(request, Reasons::BOUNCED)
     end
   end
 end

@@ -1,6 +1,15 @@
 require_relative "boot"
 
-require "rails/all"
+# Solo los frameworks que usa la app (sin Active Storage, Action Mailer, Action Mailbox ni Action Text).
+# El correo sale por SendGrid API, no por Action Mailer. Action Cable queda porque turbo-rails lo requiere.
+require "rails"
+require "active_model/railtie"
+require "active_job/railtie"
+require "active_record/railtie"
+require "action_controller/railtie"
+require "action_view/railtie"
+require "action_cable/engine"
+require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -12,8 +21,8 @@ module NotificationHub
     config.load_defaults 8.1
 
     # lib/notifications es el núcleo de la central y se carga con Zeitwerk.
-    # El cop de RuboCop y el generador se cargan por su cuenta; errors.rb lo carga lib/notifications.rb.
-    config.autoload_lib(ignore: %w[assets tasks rubocop generators notifications/errors.rb])
+    # El cop de RuboCop y el generador se cargan por su cuenta.
+    config.autoload_lib(ignore: %w[assets tasks rubocop generators])
 
     # Interfaz en español neutro
     config.i18n.default_locale = :es
